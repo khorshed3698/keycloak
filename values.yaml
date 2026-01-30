@@ -1,0 +1,11 @@
+auth:
+  adminUser: admin
+  adminPassword: admin123
+
+service:
+  type: NodePort
+
+postgresql:
+  enabled: true
+
+replicaCount: 1
