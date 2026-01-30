@@ -1,26 +1,70 @@
-apiVersion: argoproj.io/v1alpha1
-kind: Application
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-config
+  namespace: keycloak
+data:
+  KEYCLOAK_USER: admin
+  KEYCLOAK_PASSWORD: admin123
+
+---
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: keycloak
-  namespace: argocd
+  namespace: keycloak
 spec:
-  project: default
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:21.1.1
+          args:
+            - start-dev
+          env:
+            - name: KEYCLOAK_ADMIN
+              valueFrom:
+                configMapKeyRef:
+                  name: keycloak-config
+                  key: KEYCLOAK_USER
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: keycloak-config
+                  key: KEYCLOAK_PASSWORD
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
 
-  source:
-    repoURL: https://github.com/YOUR_ORG/YOUR_REPO.git
-    targetRevision: main
-    path: keycloak
-    helm:
-      valueFiles:
-        - values.yaml
-
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: keycloak
-
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: keycloak
+spec:
+  type: ClusterIP
+  selector:
+    app: keycloak
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
