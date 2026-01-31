@@ -7,5 +7,8 @@ service:
 
 postgresql:
   enabled: true
+  primary:
+    persistence:
+      enabled: false
 
 replicaCount: 1
