@@ -41,17 +41,15 @@ spec:
                   key: KEYCLOAK_PASSWORD
           ports:
             - containerPort: 8080
-          livenessProbe:           # ✅ moved inside container
-            httpGet:
-              path: /health/ready
+          livenessProbe:           # TCP probe
+            tcpSocket:
               port: 8080
             initialDelaySeconds: 180
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
-          readinessProbe:          # ✅ moved inside container
-            httpGet:
-              path: /health/ready
+          readinessProbe:          # TCP probe
+            tcpSocket:
               port: 8080
             initialDelaySeconds: 180
             periodSeconds: 10
