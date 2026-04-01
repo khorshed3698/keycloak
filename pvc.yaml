@@ -1,12 +1,12 @@
 apiVersion: v1
-kind: PersistentVolume
+kind: PersistentVolumeClaim
 metadata:
-  name: keycloak-pv
+  name: keycloak-db-pvc
+  namespace: keycloak
 spec:
-  capacity:
-    storage: 5Gi
   accessModes:
     - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  hostPath:
-    path: /mnt/keycloak-data
+  storageClassName: "" # এটি ইনভার্টেড কমার ভেতরে খালি রাখা খুব জরুরি
+  resources:
+    requests:
+      storage: 5Gi
