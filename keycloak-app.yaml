@@ -14,7 +14,7 @@ metadata:
   name: keycloak
   namespace: keycloak
 spec:
-  replicas: 3
+  replicas: 1 # সতর্কতা: PVC ব্যবহারের সময় ১টি রিপ্লিকা রাখা নিরাপদ (ReadWriteOnce এর জন্য)
   selector:
     matchLabels:
       app: keycloak
@@ -41,20 +41,27 @@ spec:
                   key: KEYCLOAK_PASSWORD
           ports:
             - containerPort: 8080
-          livenessProbe:           # TCP probe
+          volumeMounts:           # কন্টেইনারের ভেতরে পাথ মাউন্ট করা
+            - name: keycloak-data
+              mountPath: /opt/keycloak/data
+          livenessProbe:
             tcpSocket:
               port: 8080
             initialDelaySeconds: 180
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
-          readinessProbe:          # TCP probe
+          readinessProbe:
             tcpSocket:
               port: 8080
             initialDelaySeconds: 180
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
+      volumes:                    # পিভিসি কানেক্ট করা
+        - name: keycloak-data
+          persistentVolumeClaim:
+            claimName: keycloak-db-pvc
 
 ---
 apiVersion: v1
