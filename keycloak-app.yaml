@@ -54,7 +54,7 @@ spec:
                   name: keycloak-config
                   key: KEYCLOAK_PASSWORD
           ports:
-            - containerPort: 8080
+            - containerPort: 8088
           volumeMounts:
             - name: keycloak-data
               mountPath: /opt/keycloak/data
