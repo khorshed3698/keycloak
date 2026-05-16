@@ -14,7 +14,7 @@ metadata:
   name: keycloak
   namespace: keycloak
 spec:
-  replicas: 1 # সতর্কতা ফিক্স: ReadWriteOnce PVC এর জন্য ১টি রিপ্লিকা রাখা নিরাপদ
+  replicas: 1 
   selector:
     matchLabels:
       app: keycloak
@@ -23,19 +23,13 @@ spec:
       labels:
         app: keycloak
     spec:
-      # ১. সিকিউরিটি কনটেক্সট যোগ করা হয়েছে যাতে ভলিউম ফাইল সিস্টেমের মালিকানা UID 1000 পায়
+      # ১. এই সিকিউরিটি সেটিংস কুবারনেটিসকে নিজে থেকে মাউন্টের ওনারশিপ UID 1000 এ রূপান্তর করতে বাধ্য করবে
       securityContext:
-        fsGroup: 1000
         runAsUser: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: "Always"
 
-      # ২. ইনিট কন্টেইনার যোগ করা হয়েছে যা মাউন্ট করা ফোল্ডারের পারমিশন রানটাইমে ফিক্স করবে
-      initContainers:
-        - name: fix-volume-permissions
-          image: busybox
-          command: ["sh", "-c", "chown -R 1000:1000 /opt/keycloak/data && chmod -R 770 /opt/keycloak/data"]
-          volumeMounts:
-            - name: keycloak-data
-              mountPath: /opt/keycloak/data
+      # ২. ক্র্যাশিং initContainers ব্লকটি এখান থেকে সম্পূর্ণ রিমুভ করা হয়েছে
 
       containers:
         - name: keycloak
@@ -54,14 +48,14 @@ spec:
                   name: keycloak-config
                   key: KEYCLOAK_PASSWORD
           ports:
-            - containerPort: 8088
+            - containerPort: 8080
           volumeMounts:
             - name: keycloak-data
               mountPath: /opt/keycloak/data
           livenessProbe:
             tcpSocket:
               port: 8080
-            initialDelaySeconds: 120 # ৩ মিনিট অনেক বেশি ছিল, ২ মিনিটে আনা হয়েছে দ্রুত রিকভারির জন্য
+            initialDelaySeconds: 120
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
