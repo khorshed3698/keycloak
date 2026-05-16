@@ -14,7 +14,7 @@ metadata:
   name: keycloak
   namespace: keycloak
 spec:
-  replicas: 3 # সতর্কতা: PVC ব্যবহারের সময় ১টি রিপ্লিকা রাখা নিরাপদ (ReadWriteOnce এর জন্য)
+  replicas: 1 # সতর্কতা ফিক্স: ReadWriteOnce PVC এর জন্য ১টি রিপ্লিকা রাখা নিরাপদ
   selector:
     matchLabels:
       app: keycloak
@@ -23,6 +23,20 @@ spec:
       labels:
         app: keycloak
     spec:
+      # ১. সিকিউরিটি কনটেক্সট যোগ করা হয়েছে যাতে ভলিউম ফাইল সিস্টেমের মালিকানা UID 1000 পায়
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+
+      # ২. ইনিট কন্টেইনার যোগ করা হয়েছে যা মাউন্ট করা ফোল্ডারের পারমিশন রানটাইমে ফিক্স করবে
+      initContainers:
+        - name: fix-volume-permissions
+          image: busybox
+          command: ["sh", "-c", "chown -R 1000:1000 /opt/keycloak/data && chmod -R 770 /opt/keycloak/data"]
+          volumeMounts:
+            - name: keycloak-data
+              mountPath: /opt/keycloak/data
+
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:latest
@@ -41,24 +55,24 @@ spec:
                   key: KEYCLOAK_PASSWORD
           ports:
             - containerPort: 8080
-          volumeMounts:           # কন্টেইনারের ভেতরে পাথ মাউন্ট করা
+          volumeMounts:
             - name: keycloak-data
               mountPath: /opt/keycloak/data
           livenessProbe:
             tcpSocket:
               port: 8080
-            initialDelaySeconds: 180
+            initialDelaySeconds: 120 # ৩ মিনিট অনেক বেশি ছিল, ২ মিনিটে আনা হয়েছে দ্রুত রিকভারির জন্য
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
           readinessProbe:
             tcpSocket:
               port: 8080
-            initialDelaySeconds: 180
+            initialDelaySeconds: 120
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
-      volumes:                    # পিভিসি কানেক্ট করা
+      volumes:
         - name: keycloak-data
           persistentVolumeClaim:
             claimName: keycloak-db-pvc
